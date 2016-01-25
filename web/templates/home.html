@@ -1,0 +1,99 @@
+{% extends 'template.html' %}
+
+{% block content %}
+<div class="container">
+  <div class="row">
+    <div class="col-md-6">
+      <h1>Horaire des bénévoles</h1>
+    </div>
+    <div class="col-md-6">
+      <h1 class="text-right">
+        {% if request.authorization %}
+        <small>Bienvenu, {{ request.authorization.username }}</small>
+        <a class="btn btn-warning" href="{{ url_for('logout') }}">Sortir d'ici!</a>
+        {% else %}
+        <a class="btn btn-success" href="{{ url_for('login') }}">Faire un pacte</a>
+        {% endif %}
+      </h1>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-12">
+      {% for category, message in get_flashed_messages(with_categories=true) %}
+      <div class="alert alert-{{ 'info' if category == 'message' else category }}">
+        {{ message }}
+      </div>
+      {% endfor %}
+      <form method="post">
+        {% if request.authorization %}
+        <input type="hidden" name="user_id" value="{{ query('select id from users where username=:username', **request.authorization).fetchone().id }}">
+        {% endif %}
+        <table class="table table-bordered">
+          <thead>
+            <tr>
+              <th></th>
+              <th class="text-center">lundi</th>
+              <th class="text-center">mardi</th>
+              <th class="text-center">mercredi</th>
+              <th class="text-center">jeudi</th>
+              <th class="text-center">vendredi</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for hour in range(7,18) %}
+            <tr>
+              <th class="text-right">{{ hour }}:00</th>
+              {% for day in ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi'] %}
+              <td class="text-center" style="vertical-align: middle;">
+                <!-- afficher les bénévoles inscrits -->
+                {% for inscrit in query("select * from users_shifts join users on users.id = user_id join shifts on shifts.id=shift_id where day=:day and begin between time(:hour * 3600, 'unixepoch') and time((:hour + 1) * 3599, 'unixepoch')", day=day, hour=hour) %}
+                {{ inscrit.username }} jusqu'à {{ inscrit.end }}
+                <hr>
+                {{ inscrits  }}
+                {% endfor %}
+                {% for shift in query("select *, count(user_id) as registered_users from shifts left join users_shifts on shifts.id = users_shifts.shift_id where day=:day and begin between time(:hour * 3600, 'unixepoch') and time((:hour + 1) * 3599, 'unixepoch') group by shifts.id having max_users > registered_users", day=day, hour=hour) %}
+                {% if loop.index > 1 %}
+                <hr>
+                {% endif %}
+                <h4>Jusqu'à {{ shift.end }}</h4>
+                Il reste {{ shift.max_users - shift.registered_users }} places parmi {{ shift.max_users }} bénévoles
+                {% if request.authorization %}
+                <button class="btn btn-info" name="shift_id" value="{{ shift.id }}">Donner mon âme au café</button>
+                {% endif %}
+                {% else %}
+                {% endfor %}
+              </td>
+              {% endfor %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </form>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-4">
+      <h4>Inscription</h4>
+      <form action="{{ url_for('register') }}" method="post">
+        <div class="form-group">
+          <input class="form-control" name="username" placeholder="Nom d'utilisateur" required>
+        </div>
+        <div class="form-group">
+          <input class="form-control" type="password" name="password" placeholder="Mot de passe" required>
+        </div>
+        <button class="btn" type="submit">M'inscrire</button>
+      </form>
+    </div>
+    <div class="col-md-4">
+      <h4>Bénévoles inscrits</h4>
+      <dl class="dl-horizontal">
+        {% for user in query('select * from users') %}
+        <dt>{{ user.username }}</dt>
+        <dd><a href="{{ url_for('messages', user_id=user.id) }}#chatbox">Envoyer un message</a></dd>
+        {% endfor %}
+      </dl>
+      <a class="btn btn-danger" href="{{ url_for ('clean') }}">Effacer les inscriptions</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends 'template.html' %}
+
+{% block content %}
+<div class="container">
+  <div class="col-md-6 col-md-offset-3">
+    {% for message in messages %}
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        {{ query('select username from users where id=:from_id', **message).fetchone().username }} dit:
+      </div>
+      <div class="panel-body">
+        <p>{{ message.message }}</p>
+      </div>
+      <div class="panel-footer">
+        Envoyé le {{ message.sent }}.
+      </div>
+    </div>
+    {% else %}
+    Nietzche!
+    {% endfor %}
+    <h3>Conversation avec {{ query('select username from users where id=:to_id', to_id=to_id).fetchone().username }}</h3>
+    <form id="#chatbox" method="post">
+      <input type="hidden" name="from_id" value="{{ query('select id from users where username=:username', **request.authorization).fetchone().id }}">
+      <input type="hidden" name="to_id" value="{{ to_id }}">
+      <div class="form-group text-right">
+        <textarea class="form-control" name="message" placeholder="Votre message ici..." autofocus></textarea>
+      </div>
+      <div class="form-group text-right">
+        <a class="btn btn-default" href="{{ url_for('home') }}">Retour</a>
+        <button class="btn btn-primary" type="submit">Envoyer</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
