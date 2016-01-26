@@ -1,0 +1,4 @@
+
+6 caractères:
+
+    [AEMR]
